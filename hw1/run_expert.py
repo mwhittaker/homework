@@ -9,6 +9,8 @@ Example usage:
 Author of this script and included expert policies: Jonathan Ho (hoj@openai.com)
 """
 
+import sys
+
 import pickle
 import tensorflow as tf
 import numpy as np
@@ -22,6 +24,7 @@ def main():
     parser.add_argument('expert_policy_file', type=str)
     parser.add_argument('envname', type=str)
     parser.add_argument('--render', action='store_true')
+    parser.add_argument("--outputfile", type=str, default="rollouts.pkl")
     parser.add_argument("--max_timesteps", type=int)
     parser.add_argument('--num_rollouts', type=int, default=20,
                         help='Number of expert roll outs')
@@ -50,7 +53,7 @@ def main():
             while not done:
                 action = policy_fn(obs[None,:])
                 observations.append(obs)
-                actions.append(action)
+                actions.append(action[0])
                 obs, r, done, _ = env.step(action)
                 totalr += r
                 steps += 1
@@ -67,6 +70,8 @@ def main():
 
         expert_data = {'observations': np.array(observations),
                        'actions': np.array(actions)}
+        with open(args.outputfile, "wb") as f:
+            pickle.dump(expert_data, f)
 
 if __name__ == '__main__':
     main()
