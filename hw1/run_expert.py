@@ -14,15 +14,16 @@ Author of this script and included expert policies: Jonathan Ho
 (hoj@openai.com)
 """
 
+import argparse
 import gym
 import json
 import load_policy
 import numpy as np
+import os.path
 import pickle
 import sys
 import tensorflow as tf
 import tf_util
-import argparse
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -67,6 +68,10 @@ def get_parser():
 
 def main():
     args = get_parser().parse_args()
+
+    # Make sure our files exist!
+    assert(os.path.exists(os.path.dirname(os.path.abspath(args.stats_file))))
+    assert(os.path.exists(os.path.dirname(os.path.abspath(args.rollouts_file))))
 
     print("Loading and building expert policy.")
     policy_fn = load_policy.load_policy(args.expert_policy_file)

@@ -24,6 +24,9 @@ def main(_):
     observation_length = observations.shape[1]
     action_length = actions.shape[1]
 
+    assert(observations.shape[0] == actions.shape[0])
+    assert(observations.shape[0] % ARGS.batch_size == 0)
+
     # Assemble the network.
     opl = tf.placeholder(tf.float32, shape=(None, observation_length),
                          name="observations")
@@ -36,7 +39,7 @@ def main(_):
 
     # Initialize the network.
     init = tf.global_variables_initializer()
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=10)
     sess = tf.Session()
 
     if os.path.exists(ARGS.checkpoint_dir):
@@ -45,14 +48,23 @@ def main(_):
         sess.run(init)
 
     # Train the network.
+    num_batches = observations.shape[0] / ARGS.batch_size
     for step in range(ARGS.training_steps):
-        feed_dict = {opl: observations, apl: actions}
+        i = step % num_batches
+        if i == 0:
+            p = np.random.permutation(observations.shape[0])
+            observations = observations[p]
+            actions = actions[p]
+        start = int(i * ARGS.batch_size)
+        stop = int((i + 1) * ARGS.batch_size)
+        feed_dict = {opl: observations[start:stop], apl: actions[start:stop]}
         _, loss_value, step_value = sess.run([train_op, loss, global_step],
                                              feed_dict=feed_dict)
-        if step % 100 == 0:
+        if step % 500 == 0:
             basename = os.path.basename(ARGS.checkpoint_dir)
             checkpoint_file = os.path.join(ARGS.checkpoint_dir, basename)
             saver.save(sess, checkpoint_file, global_step=step_value)
+            loss_value = sess.run(loss, feed_dict={opl: observations, apl:actions})
             msg = "step {}; loss = {}".format(step_value, loss_value)
             print(msg)
 
@@ -75,6 +87,12 @@ def get_parser():
         type=int,
         default=64,
         help="Number of hiiden layer 2 units.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=500,
+        help="Batch size for batch gradient descent",
     )
     parser.add_argument(
         "--learning_rate",
