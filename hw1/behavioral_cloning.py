@@ -1,6 +1,9 @@
+# http://cv-tricks.com/tensorflow-tutorial/save-restore-tensorflow-models-quick-complete-tutorial/
+
 import sys
 import argparse
 import pickle
+import os.path
 
 import tensorflow as tf
 import numpy as np
@@ -27,21 +30,38 @@ def main(_):
     logits = network.inference(opl, observation_length,
                                ARGS.hidden1, ARGS.hidden2, action_length)
     errors, loss = network.loss(logits, apl)
-    train_op = network.training(loss, ARGS.learning_rate)
+    global_step, train_op = network.training(loss, ARGS.learning_rate)
 
+    # Initialize the network.
     init = tf.global_variables_initializer()
+    saver = tf.train.Saver()
     sess = tf.Session()
-    sess.run(init)
+
+    if os.path.exists(ARGS.checkpoint_dir):
+        saver.restore(sess, tf.train.latest_checkpoint(ARGS.checkpoint_dir))
+    else:
+        sess.run(init)
+
+    # Train the network.
     for step in range(ARGS.training_steps):
         feed_dict = {opl: observations, apl: actions}
-        _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
+        _, loss_value, step_value = sess.run([train_op, loss, global_step],
+                                             feed_dict=feed_dict)
         if step % 100 == 0:
-            msg = "step {}/{}; loss = {}".format(step, ARGS.training_steps,
-                                                 loss_value)
+            basename = os.path.basename(ARGS.checkpoint_dir)
+            checkpoint_file = os.path.join(ARGS.checkpoint_dir, basename)
+            saver.save(sess, checkpoint_file, global_step=step_value)
+            msg = "step {}; loss = {}".format(step_value, loss_value)
             print(msg)
 
 def get_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        required=True,
+        help="Directory to write checkpoints.",
+    )
     parser.add_argument(
         "--hidden1",
         type=int,

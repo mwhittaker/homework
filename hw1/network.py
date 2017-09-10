@@ -80,4 +80,4 @@ def training(loss, learning_rate):
   # Use the optimizer to apply the gradients that minimize the loss
   # (and also increment the global step counter) as a single training step.
   train_op = optimizer.minimize(loss, global_step=global_step)
-  return train_op
+  return global_step, train_op
