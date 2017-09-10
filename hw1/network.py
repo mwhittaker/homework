@@ -50,7 +50,7 @@ def inference(observations, observation_length, hidden1_units, hidden2_units,
                             stddev=1.0 / math.sqrt(float(hidden2_units))),
         name='weights')
     biases = tf.Variable(tf.zeros([action_length]), name='biases')
-    logits = tf.matmul(hidden2, weights) + biases
+    logits = tf.add(tf.matmul(hidden2, weights), biases, name="logits")
   return logits
 
 

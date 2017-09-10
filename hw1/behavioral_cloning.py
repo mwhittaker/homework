@@ -25,8 +25,10 @@ def main(_):
     action_length = actions.shape[1]
 
     # Assemble the network.
-    opl = tf.placeholder(tf.float32, shape=(None, observation_length))
-    apl = tf.placeholder(tf.float32, shape=(None, action_length))
+    opl = tf.placeholder(tf.float32, shape=(None, observation_length),
+                         name="observations")
+    apl = tf.placeholder(tf.float32, shape=(None, action_length),
+                         name="actions")
     logits = network.inference(opl, observation_length,
                                ARGS.hidden1, ARGS.hidden2, action_length)
     errors, loss = network.loss(logits, apl)
