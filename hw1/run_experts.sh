@@ -5,13 +5,13 @@ set -euo pipefail
 main() {
     experts=()
     # experts+=(Ant-v1)
-    # experts+=(HalfCheetah-v1)
+    experts+=(HalfCheetah-v1)
     # experts+=(Hopper-v1)
     # experts+=(Humanoid-v1)
     # experts+=(Reacher-v1)
-    experts+=(Walker2d-v1)
+    # experts+=(Walker2d-v1)
 
-    readonly num_rollouts=1000
+    readonly num_rollouts=10
     readonly data_dir=expert_rollouts
 
     for expert in "${experts[@]}"; do

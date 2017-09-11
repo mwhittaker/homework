@@ -60,7 +60,7 @@ def main(_):
         feed_dict = {opl: observations[start:stop], apl: actions[start:stop]}
         _, loss_value, step_value = sess.run([train_op, loss, global_step],
                                              feed_dict=feed_dict)
-        if step % 500 == 0:
+        if step % 100 == 0:
             basename = os.path.basename(ARGS.checkpoint_dir)
             checkpoint_file = os.path.join(ARGS.checkpoint_dir, basename)
             saver.save(sess, checkpoint_file, global_step=step_value)
