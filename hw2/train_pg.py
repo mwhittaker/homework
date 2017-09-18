@@ -208,6 +208,7 @@ def train_PG(exp_name='',
             input_placeholder=sy_ob_no,
             output_size=ac_dim,
             scope="sy_mean",
+            activation=tf.nn.relu,
         )
         stddev = 1.0 / math.sqrt(float(ac_dim))
         sy_logstd = tf.Variable(tf.truncated_normal([ac_dim], stddev=stddev))

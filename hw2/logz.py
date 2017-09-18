@@ -5,7 +5,7 @@ import json
 Some simple logging functionality, inspired by rllab's logging.
 Assumes that each diagnostic gets logged each iteration
 
-Call logz.configure_output_dir() to start logging to a 
+Call logz.configure_output_dir() to start logging to a
 tab-separated-values file (some_folder_name/log.txt)
 
 To load the learning curves, you can do, for example
@@ -73,7 +73,7 @@ def save_params(params):
     with open(osp.join(G.output_dir, "params.json"), 'w') as out:
         out.write(json.dumps(params, separators=(',\n','\t:\t'), sort_keys=True))
 
-def pickle_tf_vars():  
+def pickle_tf_vars():
     """
     Saves tensorflow variables
     Requires them to be initialized first, also a default session must exist
@@ -81,7 +81,7 @@ def pickle_tf_vars():
     _dict = {v.name : v.eval() for v in tf.global_variables()}
     with open(osp.join(G.output_dir, "vars.pkl"), 'wb') as f:
         pickle.dump(_dict, f)
-    
+
 
 def dump_tabular():
     """
@@ -96,7 +96,7 @@ def dump_tabular():
     print("-"*n_slashes)
     for key in G.log_headers:
         val = G.log_current_row.get(key, "")
-        if hasattr(val, "__float__"): valstr = "%8.3g"%val
+        if hasattr(val, "__float__"): valstr = "%8.3f"%val
         else: valstr = val
         print(fmt%(key, valstr))
         vals.append(val)
