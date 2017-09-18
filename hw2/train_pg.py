@@ -52,6 +52,11 @@ def pathlength(path):
 def d(s):
     logging.getLogger(__name__).debug(s)
 
+def discount_reward(rewards, gamma):
+    return sum((gamma**i) * r for (i, r) in enumerate(rewards))
+
+def discount_rewards(rewards, gamma):
+    return [discount_reward(rewards[i:], gamma) for i in range(len(rewards))]
 
 #==============================================================================#
 # Policy Gradient
@@ -334,10 +339,13 @@ def train_PG(exp_name='',
         #
         #====================================================================================#
         if reward_to_go:
-            assert(False)
+            q_n = np.concatenate([discount_rewards(path["reward"], gamma)
+                                  for path in paths])
         else:
-            ret = lambda path: sum((gamma**i) * r for (i, r) in enumerate(path["reward"]))
-            q_n = np.concatenate([[ret(path)] * pathlength(path) for path in paths])
+            q_n = np.concatenate([
+                [discount_reward(path["reward"], gamma)] * pathlength(path)
+                for path in paths
+            ])
 
         #====================================================================================#
         #                           ----------SECTION 5----------
