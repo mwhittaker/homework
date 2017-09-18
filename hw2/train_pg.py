@@ -3,6 +3,7 @@ import gym
 import inspect
 import logging
 import logz
+import math
 import numpy as np
 import os
 import scipy.signal
@@ -203,11 +204,21 @@ def train_PG(exp_name='',
         d("sy_logprob_n = {}".format(sy_logprob_n))
 
     else:
-        # YOUR_CODE_HERE
-        sy_mean = TODO
-        sy_logstd = TODO # logstd should just be a trainable variable, not a network output.
-        sy_sampled_ac = TODO
-        sy_logprob_n = TODO  # Hint: Use the log probability under a multivariate gaussian.
+        sy_mean = build_mlp(
+            input_placeholder=sy_ob_no,
+            output_size=ac_dim,
+            scope="sy_mean",
+        )
+        stddev = 1.0 / math.sqrt(float(ac_dim))
+        sy_logstd = tf.Variable(tf.truncated_normal([ac_dim], stddev=stddev))
+        sy_sampled_ac = sy_mean + tf.random_normal([tf.shape(sy_mean)[0], ac_dim]) * tf.exp(sy_logstd)
+        dist = tf.contrib.distributions.MultivariateNormalDiag(sy_mean, tf.exp(sy_logstd))
+        sy_logprob_n = -dist.log_prob(sy_ac_na)
+
+        d("sy_mean = {}".format(sy_mean))
+        d("sy_logstd = {}".format(sy_logstd))
+        d("sy_sampled_ac = {}".format(sy_sampled_ac))
+        d("sy_logprob_n = {}".format(sy_logprob_n))
 
     #========================================================================================#
     #                           ----------SECTION 4----------
