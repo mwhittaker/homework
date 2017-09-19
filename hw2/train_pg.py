@@ -77,7 +77,8 @@ def train_PG(exp_name='',
              seed=0,
              # network arguments
              n_layers=1,
-             size=32):
+             size=32,
+             baseline_batches=1):
 
     start = time.time()
 
@@ -418,9 +419,10 @@ def train_PG(exp_name='',
                 sy_ob_no: ob_no,
                 sy_rtg_n: rtg_normalize_n,
             }
-            for _ in range(3):
+            for baseline_i in range(baseline_batches):
                 _, baseline_loss_value = sess.run([baseline_update_op, baseline_loss], feed_dict=feed_dict)
-                d("baseline_loss_value = {}".format(baseline_loss_value))
+                if baseline_i % 25 == 0:
+                    d("baseline_loss_value = {}".format(baseline_loss_value))
 
         #====================================================================================#
         #                           ----------SECTION 4----------
@@ -477,6 +479,7 @@ def main():
     parser.add_argument('--n_layers', '-l', type=int, default=1)
     parser.add_argument('--size', '-s', type=int, default=32)
     parser.add_argument('--verbose', '-v', action="store_true")
+    parser.add_argument('--baseline_batches', type=int, default=1)
     args = parser.parse_args()
 
     # Establish the logger.
@@ -518,7 +521,8 @@ def main():
                 nn_baseline=args.nn_baseline,
                 seed=seed,
                 n_layers=args.n_layers,
-                size=args.size)
+                size=args.size,
+                baseline_batches=args.baseline_batches)
         # Awkward hacky process runs, because Tensorflow does not like
         # repeatedly calling train_PG in the same thread.
         p = Process(target=train_func, args=tuple())
