@@ -242,9 +242,14 @@ def train_PG(exp_name='',
                                 size=size))
         # Define placeholders for targets, a loss function and an update op for fitting a
         # neural network baseline. These will be used to fit the neural network baseline.
-        # YOUR_CODE_HERE
-        baseline_update_op = TODO
+        sy_rtg_n = tf.placeholder(shape=[None], name="rtg", dtype=tf.float32)
+        baseline_loss = tf.losses.mean_squared_error(labels=sy_rtg_n, predictions=baseline_prediction)
+        baseline_update_op = tf.train.AdamOptimizer(learning_rate).minimize(baseline_loss)
 
+        d("baseline_prediction = {}".format(baseline_prediction))
+        d("sy_rtg_n = {}".format(sy_rtg_n))
+        d("baseline_loss = {}".format(baseline_loss))
+        d("baseline_update_op = {}".format(baseline_update_op))
 
     #========================================================================================#
     # Tensorflow Engineering: Config, Session, Variable initialization
@@ -350,9 +355,9 @@ def train_PG(exp_name='',
         # like the 'ob_no' and 'ac_na' above.
         #
         #====================================================================================#
+        rtg_n = np.concatenate([discount_rewards(path["reward"], gamma) for path in paths])
         if reward_to_go:
-            q_n = np.concatenate([discount_rewards(path["reward"], gamma)
-                                  for path in paths])
+            q_n = rtg_n
         else:
             q_n = np.concatenate([
                 [discount_reward(path["reward"], gamma)] * pathlength(path)
@@ -371,9 +376,12 @@ def train_PG(exp_name='',
             # Hint #bl1: rescale the output from the nn_baseline to match the statistics
             # (mean and std) of the current or previous batch of Q-values. (Goes with Hint
             # #bl2 below.)
-
-            b_n = TODO
-            adv_n = q_n - b_n
+            if itr == 0:
+                adv_n = q_n.copy()
+            else:
+                b_n = sess.run(baseline_prediction, feed_dict={sy_ob_no: ob_no})
+                b_n = np.mean(rtg_n) + b_n * np.std(rtg_n)
+                adv_n = q_n - b_n
         else:
             adv_n = q_n.copy()
 
@@ -405,7 +413,14 @@ def train_PG(exp_name='',
             # targets to have mean zero and std=1. (Goes with Hint #bl1 above.)
 
             # YOUR_CODE_HERE
-            pass
+            rtg_normalize_n = (rtg_n - np.mean(rtg_n)) / np.std(rtg_n)
+            feed_dict = {
+                sy_ob_no: ob_no,
+                sy_rtg_n: rtg_normalize_n,
+            }
+            for _ in range(3):
+                _, baseline_loss_value = sess.run([baseline_update_op, baseline_loss], feed_dict=feed_dict)
+                d("baseline_loss_value = {}".format(baseline_loss_value))
 
         #====================================================================================#
         #                           ----------SECTION 4----------
