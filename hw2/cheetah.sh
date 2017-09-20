@@ -18,6 +18,4 @@ main() {
         --exp_name cheetah
 }
 
-# 0.0175 learning rate; 2 x 16 gets 130 or so pretty consistently
-
 main
