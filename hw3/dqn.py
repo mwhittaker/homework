@@ -86,6 +86,15 @@ def learn(env,
     assert type(env.observation_space) == gym.spaces.Box
     assert type(env.action_space)      == gym.spaces.Discrete
 
+    d("replay_buffer_size = {}".format(replay_buffer_size))
+    d("batch_size = {}".format(batch_size))
+    d("gamma = {}".format(gamma))
+    d("learning_starts = {}".format(learning_starts))
+    d("learning_freq = {}".format(learning_freq))
+    d("frame_history_len = {}".format(frame_history_len))
+    d("target_update_freq = {}".format(target_update_freq))
+    d("target_update_freq = {}".format(target_update_freq))
+
     ###############
     # BUILD MODEL #
     ###############
@@ -234,12 +243,12 @@ def learn(env,
         idx = replay_buffer.store_frame(last_obs)
 
         epsilon = exploration.value(t)
-        if t == 0:
-            # On the first timestep, our model hasn't yet been initialized, so
-            # we choose an action at random.
+        if not model_initialized:
+            # If our model hasn't yet been initialized, we choose an action at
+            # random.
             action = random.randint(0, num_actions - 1)
         else:
-            # If \epsilon is not 0, we have to pick an action using an
+            # If our model is initialized, we choose an action using an
             # epsilon-greedy policy.
             o = replay_buffer.encode_recent_observation()
             action = session.run(argmax_qs, feed_dict={obs_t_ph: o[None]})[0]
@@ -256,11 +265,6 @@ def learn(env,
         replay_buffer.store_effect(idx, action, reward, done)
         if done:
             last_obs = env.reset()
-
-        d("epsilon = {}".format(epsilon))
-        d("action = {}".format(action))
-        d("reward = {}".format(reward))
-        d("done = {}".format(done))
 
         #####
 
@@ -310,8 +314,33 @@ def learn(env,
             # variable num_param_updates useful for this (it was initialized to 0)
             #####
 
-            # YOUR CODE HERE
-            pass
+            # 3.a
+            sample = replay_buffer.sample(batch_size)
+            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = sample
+
+            # 3.b
+            if not model_initialized:
+                initialize_interdependent_variables(session, tf.global_variables(), {
+                    obs_t_ph: obs_batch,
+                    obs_tp1_ph: next_obs_batch,
+                })
+                model_initialized = True
+
+            # 3.c
+            feed_dict = {
+                obs_t_ph: obs_batch,
+                act_t_ph: act_batch,
+                rew_t_ph: rew_batch,
+                obs_tp1_ph: next_obs_batch,
+                done_mask_ph: done_mask,
+                learning_rate: optimizer_spec.lr_schedule.value(t),
+            }
+            _, err = session.run([train_fn, total_error], feed_dict=feed_dict)
+            num_param_updates += 1
+
+            # 3.d
+            if num_param_updates % target_update_freq == 0:
+                session.run(update_target_fn)
 
             #####
 
@@ -328,4 +357,5 @@ def learn(env,
             print("episodes %d" % len(episode_rewards))
             print("exploration %f" % exploration.value(t))
             print("learning_rate %f" % optimizer_spec.lr_schedule.value(t))
+            print("total error %f" % err)
             sys.stdout.flush()
