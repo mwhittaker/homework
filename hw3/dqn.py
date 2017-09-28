@@ -183,9 +183,8 @@ def learn(env,
     # construct optimization op (with gradient clipping)
     learning_rate = tf.placeholder(tf.float32, (), name="learning_rate")
     optimizer = optimizer_spec.constructor(learning_rate=learning_rate, **optimizer_spec.kwargs)
-    global_step = tf.Variable(0, name='global_step', trainable=False)
     train_fn = minimize_and_clip(optimizer, total_error, var_list=q_func_vars,
-            global_step=global_step, clip_val=grad_norm_clipping)
+            clip_val=grad_norm_clipping)
 
     # update_target_fn will be called periodically to copy Q network to target Q network
     update_target_fn = []
@@ -193,6 +192,11 @@ def learn(env,
                                sorted(target_q_func_vars, key=lambda v: v.name)):
         update_target_fn.append(var_target.assign(var))
     update_target_fn = tf.group(*update_target_fn)
+
+    # Global stepper.
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    global_step_update = tf.assign_add(global_step, 1)
+    session.run(tf.initialize_variables([global_step]))
 
     # construct the replay buffer
     replay_buffer = ReplayBuffer(replay_buffer_size, frame_history_len)
@@ -208,9 +212,17 @@ def learn(env,
     last_obs = env.reset()
     LOG_EVERY_N_STEPS = 10000
 
+    if os.path.exists(checkpoint_dir):
+        saver.restore(session, tf.train.latest_checkpoint(checkpoint_dir))
+        session.run(global_step_update)
+
     for t in itertools.count():
         ### 1. Check stopping criterion
         if stopping_criterion is not None and stopping_criterion(env, t):
+            global_step_val = session.run(global_step)
+            basename = os.path.basename(checkpoint_dir)
+            checkpoint_file = os.path.join(checkpoint_dir, basename)
+            saver.save(session, checkpoint_file, global_step=global_step_val)
             break
 
         ### 2. Step the env and store the transition
@@ -325,12 +337,13 @@ def learn(env,
             # 3.b
             if not model_initialized:
                 if os.path.exists(checkpoint_dir):
-                    saver.restore(session, tf.train.latest_checkpoint(checkpoint_dir))
+                    pass
                 else:
                     initialize_interdependent_variables(session, tf.global_variables(), {
                         obs_t_ph: obs_batch,
                         obs_tp1_ph: next_obs_batch,
                     })
+                    session.run(tf.assign(global_step, t))
                 model_initialized = True
 
             # 3.c
@@ -342,8 +355,7 @@ def learn(env,
                 done_mask_ph: done_mask,
                 learning_rate: optimizer_spec.lr_schedule.value(t),
             }
-            _, err, global_step_val = session.run([train_fn, total_error, global_step],
-                                                  feed_dict=feed_dict)
+            _, err = session.run([train_fn, total_error], feed_dict=feed_dict)
             num_param_updates += 1
 
             # 3.d
@@ -359,6 +371,7 @@ def learn(env,
         if len(episode_rewards) > 100:
             best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
         if t % LOG_EVERY_N_STEPS == 0 and model_initialized:
+            global_step_val = session.run(global_step)
             basename = os.path.basename(checkpoint_dir)
             checkpoint_file = os.path.join(checkpoint_dir, basename)
             saver.save(session, checkpoint_file, global_step=global_step_val)
@@ -372,3 +385,5 @@ def learn(env,
             print("learning_rate %f" % optimizer_spec.lr_schedule.value(t))
             print("total error %f" % err)
             sys.stdout.flush()
+
+        session.run(global_step_update)
