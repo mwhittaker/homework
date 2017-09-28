@@ -14,6 +14,11 @@ OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedu
 def d(s):
     logging.getLogger("mjw").debug(s)
 
+def flip(p):
+    """flip(p) returns True with probability p."""
+    assert 0.0 <= p <= 1
+    return True if random.random() <= p else False
+
 def learn(env,
           q_func,
           optimizer_spec,
@@ -134,6 +139,7 @@ def learn(env,
     ######
     # Q-values
     all_qs = q_func(obs_t_float, num_actions, scope="qs", reuse=False)
+    argmax_qs = tf.argmax(all_qs, axis=1)
     one_hot_actions = tf.one_hot(act_t_ph, depth=num_actions)
     qs = tf.reduce_sum(all_qs * one_hot_actions, axis=1)
 
@@ -152,6 +158,7 @@ def learn(env,
     target_q_func_vars = tf.get_collection(GV, scope="target_qs")
 
     d("all_qs = {}".format(all_qs))
+    d("argmax_qs = {}".format(argmax_qs))
     d("one_hot_actions = {}".format(one_hot_actions))
     d("qs = {}".format(qs))
     d("target_qs = {}".format(target_qs))
@@ -224,8 +231,36 @@ def learn(env,
         # might as well be random, since you haven't trained your net...)
 
         #####
+        idx = replay_buffer.store_frame(last_obs)
 
-        # YOUR CODE HERE
+        epsilon = exploration.value(t)
+        if t == 0:
+            # On the first timestep, our model hasn't yet been initialized, so
+            # we choose an action at random.
+            action = random.randint(0, num_actions - 1)
+        else:
+            # If \epsilon is not 0, we have to pick an action using an
+            # epsilon-greedy policy.
+            o = replay_buffer.encode_recent_observation()
+            action = session.run(argmax_qs, feed_dict={obs_t_ph: o[None]})[0]
+            if flip(1.0 - epsilon):
+                # With 1 - epsilon probability, I stick with my action
+                pass
+            else:
+                # With epsilon probability, I choose another action uniformly
+                # at random.
+                choices = list(set(range(num_actions)) - set([action]))
+                action = random.choice(choices)
+
+        last_obs, reward, done, _info = env.step(action)
+        replay_buffer.store_effect(idx, action, reward, done)
+        if done:
+            last_obs = env.reset()
+
+        d("epsilon = {}".format(epsilon))
+        d("action = {}".format(action))
+        d("reward = {}".format(reward))
+        d("done = {}".format(done))
 
         #####
 
