@@ -11,6 +11,7 @@ import dqn
 from dqn_utils import *
 from atari_wrappers import *
 
+import logging
 
 def atari_model(img_in, num_actions, scope, reuse=False):
     # as described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
@@ -89,7 +90,7 @@ def set_global_seeds(i):
     except ImportError:
         pass
     else:
-        tf.set_random_seed(i) 
+        tf.set_random_seed(i)
     np.random.seed(i)
     random.seed(i)
 
@@ -117,6 +118,15 @@ def get_env(task, seed):
     return env
 
 def main():
+    # Establish the logger.
+    format = "[%(asctime)-15s %(pathname)s:%(lineno)-3s] %(message)s"
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(format))
+    logger = logging.getLogger("mjw")
+    logger.propagate = False
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
     # Get Atari games.
     benchmark = gym.benchmark_spec('Atari40M')
 

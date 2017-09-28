@@ -7,8 +7,12 @@ import tensorflow                as tf
 import tensorflow.contrib.layers as layers
 from collections import namedtuple
 from dqn_utils import *
+import logging
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
+
+def d(s):
+    logging.getLogger("mjw").debug(s)
 
 def learn(env,
           q_func,
@@ -80,7 +84,6 @@ def learn(env,
     ###############
     # BUILD MODEL #
     ###############
-
     if len(env.observation_space.shape) == 1:
         # This means we are running on low-dimensional observations (e.g. RAM)
         input_shape = env.observation_space.shape
@@ -88,6 +91,9 @@ def learn(env,
         img_h, img_w, img_c = env.observation_space.shape
         input_shape = (img_h, img_w, frame_history_len * img_c)
     num_actions = env.action_space.n
+
+    d("input_shape = {}".format(input_shape))
+    d("num_actions = {}".format(num_actions))
 
     # set up placeholders
     # placeholder for current observation (or state)
@@ -126,8 +132,33 @@ def learn(env,
     # q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
     # Older versions of TensorFlow may require using "VARIABLES" instead of "GLOBAL_VARIABLES"
     ######
-    
-    # YOUR CODE HERE
+    # Q-values
+    all_qs = q_func(obs_t_float, num_actions, scope="qs", reuse=False)
+    one_hot_actions = tf.one_hot(act_t_ph, depth=num_actions)
+    qs = tf.reduce_sum(all_qs * one_hot_actions, axis=1)
+
+    # Targets y_i
+    target_qs = q_func(obs_tp1_float, num_actions, scope="target_qs", reuse=False)
+    max_target_qs = tf.reduce_mean(target_qs, axis=1)
+    masked_target_qs = (1.0 - done_mask_ph) * max_target_qs
+    ys = rew_t_ph + (gamma * masked_target_qs)
+
+    # Error
+    total_error = tf.nn.l2_loss(qs - ys)
+
+    # Variables
+    GV = tf.GraphKeys.GLOBAL_VARIABLES
+    q_func_vars = tf.get_collection(GV, scope="qs")
+    target_q_func_vars = tf.get_collection(GV, scope="target_qs")
+
+    d("all_qs = {}".format(all_qs))
+    d("one_hot_actions = {}".format(one_hot_actions))
+    d("qs = {}".format(qs))
+    d("target_qs = {}".format(target_qs))
+    d("max_target_qs = {}".format(max_target_qs))
+    d("masked_target_qs = {}".format(masked_target_qs))
+    d("ys = {}".format(ys))
+    d("total_error = {}".format(total_error))
 
     ######
 
@@ -193,7 +224,7 @@ def learn(env,
         # might as well be random, since you haven't trained your net...)
 
         #####
-        
+
         # YOUR CODE HERE
 
         #####
@@ -243,8 +274,9 @@ def learn(env,
             # you should update every target_update_freq steps, and you may find the
             # variable num_param_updates useful for this (it was initialized to 0)
             #####
-            
+
             # YOUR CODE HERE
+            pass
 
             #####
 
