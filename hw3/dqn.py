@@ -9,6 +9,7 @@ from collections import namedtuple
 from dqn_utils import *
 import logging
 import os
+import pickle
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
@@ -376,14 +377,34 @@ def learn(env,
             checkpoint_file = os.path.join(checkpoint_dir, basename)
             saver.save(session, checkpoint_file, global_step=global_step_val)
 
+            metrics = {
+                "timestep": [],
+                "mean_reward": [],
+                "best_mean_reward": [],
+                "error": [],
+            }
+
+            metrics_filename = os.path.join(checkpoint_dir, "metrics.pkl")
+            if os.path.exists(metrics_filename):
+                with open(metrics_filename, "rb") as f:
+                    metrics = pickle.load(f)
+
+            metrics["timestep"].append(global_step_val)
+            metrics["mean_reward"].append(mean_episode_reward)
+            metrics["best_mean_reward"].append(best_mean_episode_reward)
+            metrics["error"].append(err)
+            with open(metrics_filename, "wb") as f:
+                pickle.dump(metrics, f)
+
             print("Timestep %d" % (t,))
-            print("Number of training iterations %d" % (global_step_val,))
+            print("Global timestep %d" % (global_step_val,))
             print("mean reward (100 episodes) %f" % mean_episode_reward)
             print("best mean reward %f" % best_mean_episode_reward)
             print("episodes %d" % len(episode_rewards))
             print("exploration %f" % exploration.value(t))
             print("learning_rate %f" % optimizer_spec.lr_schedule.value(t))
             print("total error %f" % err)
+            print("")
             sys.stdout.flush()
 
         session.run(global_step_update)
