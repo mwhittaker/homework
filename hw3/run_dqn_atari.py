@@ -12,6 +12,7 @@ from dqn_utils import *
 from atari_wrappers import *
 
 import logging
+import argparse
 
 def atari_model(img_in, num_actions, scope, reuse=False):
     # as described in https://storage.googleapis.com/deepmind-data/assets/papers/DeepMindNature14236Paper.pdf
@@ -31,6 +32,7 @@ def atari_model(img_in, num_actions, scope, reuse=False):
 
 def atari_learn(env,
                 session,
+                checkpoint_dir,
                 num_timesteps):
     # This is just a rough estimate
     num_iterations = float(num_timesteps) / 4.0
@@ -66,6 +68,7 @@ def atari_learn(env,
         q_func=atari_model,
         optimizer_spec=optimizer,
         session=session,
+        checkpoint_dir=checkpoint_dir,
         exploration=exploration_schedule,
         stopping_criterion=stopping_criterion,
         replay_buffer_size=1000000,
@@ -117,7 +120,7 @@ def get_env(task, seed):
 
     return env
 
-def main():
+def main(args):
     # Establish the logger.
     format = "[%(asctime)-15s %(pathname)s:%(lineno)-3s] %(message)s"
     handler = logging.StreamHandler()
@@ -137,7 +140,17 @@ def main():
     seed = 0 # Use a seed of zero (you may want to randomize the seed!)
     env = get_env(task, seed)
     session = get_session()
-    atari_learn(env, session, num_timesteps=task.max_timesteps)
+    atari_learn(env, session, args.checkpoint_dir, task.max_timesteps)
+
+def get_arg_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        required=True,
+        help="Directory to checkpoint NN",
+    )
+    return parser
 
 if __name__ == "__main__":
-    main()
+    main(get_arg_parser().parse_args())

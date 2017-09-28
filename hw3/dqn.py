@@ -8,6 +8,7 @@ import tensorflow.contrib.layers as layers
 from collections import namedtuple
 from dqn_utils import *
 import logging
+import os
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
@@ -23,6 +24,7 @@ def learn(env,
           q_func,
           optimizer_spec,
           session,
+          checkpoint_dir,
           exploration=LinearSchedule(1000000, 0.1),
           stopping_criterion=None,
           replay_buffer_size=1000000,
@@ -181,8 +183,9 @@ def learn(env,
     # construct optimization op (with gradient clipping)
     learning_rate = tf.placeholder(tf.float32, (), name="learning_rate")
     optimizer = optimizer_spec.constructor(learning_rate=learning_rate, **optimizer_spec.kwargs)
-    train_fn = minimize_and_clip(optimizer, total_error,
-                 var_list=q_func_vars, clip_val=grad_norm_clipping)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    train_fn = minimize_and_clip(optimizer, total_error, var_list=q_func_vars,
+            global_step=global_step, clip_val=grad_norm_clipping)
 
     # update_target_fn will be called periodically to copy Q network to target Q network
     update_target_fn = []
@@ -197,6 +200,7 @@ def learn(env,
     ###############
     # RUN ENV     #
     ###############
+    saver = tf.train.Saver(max_to_keep=10)
     model_initialized = False
     num_param_updates = 0
     mean_episode_reward      = -float('nan')
@@ -320,10 +324,13 @@ def learn(env,
 
             # 3.b
             if not model_initialized:
-                initialize_interdependent_variables(session, tf.global_variables(), {
-                    obs_t_ph: obs_batch,
-                    obs_tp1_ph: next_obs_batch,
-                })
+                if os.path.exists(checkpoint_dir):
+                    saver.restore(session, tf.train.latest_checkpoint(checkpoint_dir))
+                else:
+                    initialize_interdependent_variables(session, tf.global_variables(), {
+                        obs_t_ph: obs_batch,
+                        obs_tp1_ph: next_obs_batch,
+                    })
                 model_initialized = True
 
             # 3.c
@@ -335,7 +342,8 @@ def learn(env,
                 done_mask_ph: done_mask,
                 learning_rate: optimizer_spec.lr_schedule.value(t),
             }
-            _, err = session.run([train_fn, total_error], feed_dict=feed_dict)
+            _, err, global_step_val = session.run([train_fn, total_error, global_step],
+                                                  feed_dict=feed_dict)
             num_param_updates += 1
 
             # 3.d
@@ -351,7 +359,12 @@ def learn(env,
         if len(episode_rewards) > 100:
             best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
         if t % LOG_EVERY_N_STEPS == 0 and model_initialized:
+            basename = os.path.basename(checkpoint_dir)
+            checkpoint_file = os.path.join(checkpoint_dir, basename)
+            saver.save(session, checkpoint_file, global_step=global_step_val)
+
             print("Timestep %d" % (t,))
+            print("Number of training iterations %d" % (global_step_val,))
             print("mean reward (100 episodes) %f" % mean_episode_reward)
             print("best mean reward %f" % best_mean_episode_reward)
             print("episodes %d" % len(episode_rewards))
