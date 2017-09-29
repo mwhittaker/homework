@@ -10,6 +10,7 @@ from dqn_utils import *
 import logging
 import os
 import pickle
+import time
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
@@ -169,16 +170,6 @@ def learn(env,
     q_func_vars = tf.get_collection(GV, scope="qs")
     target_q_func_vars = tf.get_collection(GV, scope="target_qs")
 
-    d("all_qs = {}".format(all_qs))
-    d("argmax_qs = {}".format(argmax_qs))
-    d("one_hot_actions = {}".format(one_hot_actions))
-    d("qs = {}".format(qs))
-    d("target_qs = {}".format(target_qs))
-    d("max_target_qs = {}".format(max_target_qs))
-    d("masked_target_qs = {}".format(masked_target_qs))
-    d("ys = {}".format(ys))
-    d("total_error = {}".format(total_error))
-
     ######
 
     # construct optimization op (with gradient clipping)
@@ -206,6 +197,7 @@ def learn(env,
     # RUN ENV     #
     ###############
     saver = tf.train.Saver(max_to_keep=10)
+    start_time = time.time()
     model_initialized = False
     num_param_updates = 0
     mean_episode_reward      = -float('nan')
@@ -393,11 +385,15 @@ def learn(env,
             metrics["mean_reward"].append(mean_episode_reward)
             metrics["best_mean_reward"].append(best_mean_episode_reward)
             metrics["error"].append(err)
-            with open(metrics_filename, "wb") as f:
+
+            temp_metrics_filename = os.path.join(checkpoint_dir, "metrics_temp.pkl")
+            with open(temp_metrics_filename, "wb") as f:
                 pickle.dump(metrics, f)
+            os.rename(temp_metrics_filename, metrics_filename)
 
             print("Timestep %d" % (t,))
             print("Global timestep %d" % (global_step_val,))
+            print("Time (seconds) %f" % (time.time() - start_time, ))
             print("mean reward (100 episodes) %f" % mean_episode_reward)
             print("best mean reward %f" % best_mean_episode_reward)
             print("episodes %d" % len(episode_rewards))
