@@ -158,7 +158,7 @@ def learn(env,
 
     # Targets y_i
     target_qs = q_func(obs_tp1_float, num_actions, scope="target_qs", reuse=False)
-    max_target_qs = tf.reduce_mean(target_qs, axis=1)
+    max_target_qs = tf.reduce_max(target_qs, axis=1)
     masked_target_qs = (1.0 - done_mask_ph) * max_target_qs
     ys = rew_t_ph + (gamma * masked_target_qs)
 
