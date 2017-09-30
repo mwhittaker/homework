@@ -196,14 +196,14 @@ def learn(env,
     ###############
     # RUN ENV     #
     ###############
-    saver = tf.train.Saver(max_to_keep=10)
+    saver = tf.train.Saver(max_to_keep=3)
     start_time = time.time()
     model_initialized = False
     num_param_updates = 0
     mean_episode_reward      = -float('nan')
     best_mean_episode_reward = -float('inf')
     last_obs = env.reset()
-    LOG_EVERY_N_STEPS = 10000
+    LOG_EVERY_N_STEPS = 1000
 
     if os.path.exists(checkpoint_dir):
         saver.restore(session, tf.train.latest_checkpoint(checkpoint_dir))
