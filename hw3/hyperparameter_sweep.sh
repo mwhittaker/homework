@@ -4,11 +4,11 @@ set -euo pipefail
 
 main() {
     set -x
-    for freq in 1000 5000 20000; do
+    for bufsize in 1000 10000 100000; do
         python run_dqn_atari.py \
             --num_timesteps 6000000 \
-            --target_update_freq $freq \
-            --checkpoint_dir "checkpoints/target_update_freq_$freq"
+            --replay_buffer_size $bufsize \
+            --checkpoint_dir "checkpoints/replay_buffer_size_$bufsize"
     done
     set +x
 }

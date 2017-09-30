@@ -34,7 +34,8 @@ def atari_learn(env,
                 session,
                 checkpoint_dir,
                 num_timesteps,
-                target_update_freq):
+                target_update_freq,
+                replay_buffer_size):
     # This is just a rough estimate
     num_iterations = float(num_timesteps) / 4.0
 
@@ -72,7 +73,7 @@ def atari_learn(env,
         checkpoint_dir=checkpoint_dir,
         exploration=exploration_schedule,
         stopping_criterion=stopping_criterion,
-        replay_buffer_size=1000000,
+        replay_buffer_size=replay_buffer_size,
         batch_size=32,
         gamma=0.99,
         learning_starts=50000,
@@ -143,7 +144,13 @@ def main(args):
     session = get_session()
     print(task.max_timesteps)
     num_timesteps = args.num_timesteps or task.max_timesteps
-    atari_learn(env, session, args.checkpoint_dir, num_timesteps, args.target_update_freq)
+    atari_learn(
+        env=env,
+        session=session,
+        checkpoint_dir=args.checkpoint_dir,
+        num_timesteps=num_timesteps,
+        target_update_freq=args.target_update_freq,
+        replay_buffer_size=args.replay_buffer_size)
 
 def get_arg_parser():
     parser = argparse.ArgumentParser()
@@ -157,6 +164,12 @@ def get_arg_parser():
         "--num_timesteps",
         type=int,
         help="Maximum number of timesteps to run",
+    )
+    parser.add_argument(
+        "--replay_buffer_size",
+        type=int,
+        default=1000000,
+        help="Size of the replay buffer",
     )
     parser.add_argument(
         "--checkpoint_dir",
