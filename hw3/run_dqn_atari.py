@@ -33,7 +33,8 @@ def atari_model(img_in, num_actions, scope, reuse=False):
 def atari_learn(env,
                 session,
                 checkpoint_dir,
-                num_timesteps):
+                num_timesteps,
+                target_update_freq):
     # This is just a rough estimate
     num_iterations = float(num_timesteps) / 4.0
 
@@ -59,7 +60,7 @@ def atari_learn(env,
         [
             (0, 1.0),
             (1e6, 0.1),
-            (num_iterations / 2, 0.01),
+            (10e6 / 2, 0.01),
         ], outside_value=0.01
     )
 
@@ -77,7 +78,7 @@ def atari_learn(env,
         learning_starts=50000,
         learning_freq=4,
         frame_history_len=4,
-        target_update_freq=10000,
+        target_update_freq=target_update_freq,
         grad_norm_clipping=10
     )
     env.close()
@@ -140,10 +141,23 @@ def main(args):
     seed = 0 # Use a seed of zero (you may want to randomize the seed!)
     env = get_env(task, seed)
     session = get_session()
-    atari_learn(env, session, args.checkpoint_dir, task.max_timesteps)
+    print(task.max_timesteps)
+    num_timesteps = args.num_timesteps or task.max_timesteps
+    atari_learn(env, session, args.checkpoint_dir, num_timesteps, args.target_update_freq)
 
 def get_arg_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--target_update_freq",
+        type=int,
+        default=10000,
+        help="How often to copy current network to target network",
+    )
+    parser.add_argument(
+        "--num_timesteps",
+        type=int,
+        help="Maximum number of timesteps to run",
+    )
     parser.add_argument(
         "--checkpoint_dir",
         type=str,
