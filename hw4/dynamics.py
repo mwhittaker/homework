@@ -40,14 +40,9 @@ class NNDynamicsModel():
         """ Note: Be careful about normalization """
         # Store arguments for later.
         self.env = env
-        # self.n_layers = n_layers
-        # self.size = size
-        # self.activation = activation
-        # self.output_activation = output_activation
         self.normalization = normalization
         self.batch_size = batch_size
         self.iterations = iterations
-        # self.learning_rate = learning_rate
         self.sess = sess
 
         # Build NN placeholders.
@@ -63,7 +58,7 @@ class NNDynamicsModel():
         mean_obs, std_obs, mean_deltas, std_deltas, mean_acts, std_acts = normalization
         normalized_obs = (self.obs_ph - mean_obs) / std_obs
         normalized_acts = (self.acts_ph - mean_acts) / std_acts
-        normalized_obs_and_acts = tf.concat([self.obs_ph, self.acts_ph], 1)
+        normalized_obs_and_acts = tf.concat([normalized_obs, normalized_acts], 1)
         self.predicted_normalized_deltas = build_mlp(
             input_placeholder=normalized_obs_and_acts,
             output_size=obs_dim,
