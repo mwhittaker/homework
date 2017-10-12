@@ -1,6 +1,12 @@
-import numpy as np
-from cost_functions import trajectory_cost_fn
+import logging
 import time
+
+import numpy as np
+
+from cost_functions import trajectory_cost_fn
+
+def d(s):
+    logging.getLogger("mjw").debug(s)
 
 class Controller():
     def __init__(self):

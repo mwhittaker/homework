@@ -1,5 +1,10 @@
+import logging
+
 import tensorflow as tf
 import numpy as np
+
+def d(s):
+    logging.getLogger("mjw").debug(s)
 
 def batch_indexes(xs, batch_size):
     return [(low, low + batch_size) for low in range(0, len(xs), batch_size)]
@@ -86,14 +91,19 @@ class NNDynamicsModel():
         unnormalized_next_obs = data["next_observations"]
         assert(len(unnormalized_obs) == len(unnormalized_acts) == len(unnormalized_next_obs))
 
-        for _ in range(self.iterations):
-            for (low, high) in batch_indexes(unnormalized_obs, self.batch_size):
+        for epoch in range(self.iterations):
+            if epoch % 10 == 0:
+                d("Epoch {}/{}.".format(epoch, self.iterations))
+
+            indexes = batch_indexes(unnormalized_obs, self.batch_size)
+            for (itr, (low, high)) in enumerate(indexes):
                 feed_dict = {
                     self.obs_ph: unnormalized_obs[low:high],
                     self.acts_ph: unnormalized_acts[low:high],
                     self.next_obs_ph: unnormalized_next_obs[low:high],
                 }
                 self.sess.run([self.update_op], feed_dict=feed_dict)
+        d("Epoch {}/{}.".format(self.iterations, self.iterations))
 
     def predict(self, states, actions):
         # Write a function to take in a batch of (unnormalized) states and
