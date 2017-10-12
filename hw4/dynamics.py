@@ -128,5 +128,5 @@ class NNDynamicsModel():
             feed_dict=feed_dict)
 
         _, _, mean_deltas, std_deltas, _, _ = self.normalization
-        unnormalized_deltas = (normalized_deltas * (std_deltas + self.epsilon)) + mean_deltas
+        unnormalized_deltas = (normalized_deltas * std_deltas) + mean_deltas
         return states + unnormalized_deltas
