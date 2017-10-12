@@ -17,6 +17,14 @@ import logz
 def d(s):
     logging.getLogger("mjw").debug(s)
 
+def paths_to_data(paths):
+    return {
+        "observations": np.concatenate([p["observations"] for p in paths]),
+        "actions": np.concatenate([p["actions"] for p in paths]),
+        "next_observations": np.concatenate([p["next_observations"] for p in paths]),
+        "rewards": np.concatenate([p["rewards"] for p in paths]),
+    }
+
 def sample(env,
            controller,
            num_paths=10,
@@ -137,22 +145,24 @@ def train(env,
 
     """
 
-    d("env                   = {}".format(env))
-    d("env.observation_space = {}".format(env.observation_space))
-    d("env.action_space      = {}".format(env.action_space))
-    d("logdir                = {}".format(logdir))
-    d("render                = {}".format(render))
-    d("learning_rate         = {}".format(learning_rate))
-    d("onpol_iters           = {}".format(onpol_iters))
-    d("dynamics_iters        = {}".format(dynamics_iters))
-    d("batch_size            = {}".format(batch_size))
-    d("num_paths_random      = {}".format(num_paths_random))
-    d("num_paths_onpol       = {}".format(num_paths_onpol))
-    d("num_simulated_paths   = {}".format(num_simulated_paths))
-    d("env_horizon           = {}".format(env_horizon))
-    d("mpc_horizon           = {}".format(mpc_horizon))
-    d("n_layers              = {}".format(n_layers))
-    d("size                  = {}".format(size))
+    d("env                         = {}".format(env))
+    d("env.observation_space       = {}".format(env.observation_space))
+    d("env.action_space            = {}".format(env.action_space))
+    d("env.observation_space.shape = {}".format(env.observation_space.shape))
+    d("env.action_space.shape      = {}".format(env.action_space.shape))
+    d("logdir                      = {}".format(logdir))
+    d("render                      = {}".format(render))
+    d("learning_rate               = {}".format(learning_rate))
+    d("onpol_iters                 = {}".format(onpol_iters))
+    d("dynamics_iters              = {}".format(dynamics_iters))
+    d("batch_size                  = {}".format(batch_size))
+    d("num_paths_random            = {}".format(num_paths_random))
+    d("num_paths_onpol             = {}".format(num_paths_onpol))
+    d("num_simulated_paths         = {}".format(num_simulated_paths))
+    d("env_horizon                 = {}".format(env_horizon))
+    d("mpc_horizon                 = {}".format(mpc_horizon))
+    d("n_layers                    = {}".format(n_layers))
+    d("size                        = {}".format(size))
 
     logz.configure_output_dir(logdir)
 
@@ -172,12 +182,7 @@ def train(env,
     # observations, actions, and deltas (where deltas are o_{t+1} - o_t). These
     # will be used for normalizing inputs and denormalizing outputs from the
     # dynamics network.
-    data = {
-        "observations": np.concatenate([p["observations"] for p in random_paths]),
-        "actions": np.concatenate([p["actions"] for p in random_paths]),
-        "next_observations": np.concatenate([p["next_observations"] for p in random_paths]),
-        "rewards": np.concatenate([p["rewards"] for p in random_paths]),
-    }
+    data = paths_to_data(random_paths)
     normalization = compute_normalization(data)
 
     #===========================================================================
@@ -216,15 +221,30 @@ def train(env,
     # Note: You don't need to use a mixing ratio in this assignment for new and
     # old data as described in https://arxiv.org/abs/1708.02596
     for itr in range(onpol_iters):
+        # Fit the dynamics.
         dyn_model.fit(data)
+
+        # Generate on-policy rollouts.
         rl_paths = sample(
             env=env,
             controller=mpc_controller,
             num_paths=num_paths_onpol,
             horizon=env_horizon,
             render=render)
+
+        # Compute metrics.
         costs = np.array([path_cost(cost_fn, path) for path in rl_paths])
         returns = np.concatenate([path["rewards"] for path in rl_paths])
+
+        # Update data.
+        new_data = paths_to_data(rl_paths)
+        data = {
+            "observations": np.concatenate([data["observations"], new_data["observations"]]),
+            "actions": np.concatenate([data["actions"], new_data["actions"]]),
+            "next_observations": np.concatenate([data["next_observations"], new_data["next_observations"]]),
+            "rewards": np.concatenate([data["rewards"], new_data["rewards"]]),
+        }
+        # TODO(mwhittaker): Shuffle if we need to.
 
         # LOGGING
         # Statistics for performance of MPC policy using our learned dynamics
