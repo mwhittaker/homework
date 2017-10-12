@@ -251,7 +251,7 @@ def train(env,
 
         # Compute metrics.
         costs = np.array([path_cost(cost_fn, path) for path in rl_paths])
-        returns = np.concatenate([path["rewards"] for path in rl_paths])
+        returns = np.concatenate([sum(path["rewards"]) for path in rl_paths])
 
         # Update data.
         new_data = paths_to_data(rl_paths)
