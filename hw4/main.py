@@ -195,6 +195,14 @@ def train(env,
     normalization = compute_normalization(data)
     d("Done normalizing random rollouts.")
 
+    mean_obs, std_obs, mean_deltas, std_deltas, mean_action, std_action = normalization
+    d("mean_obs    = {}".format(mean_obs))
+    d("std_obs     = {}".format(std_obs))
+    d("mean_deltas = {}".format(mean_deltas))
+    d("std_deltas  = {}".format(std_deltas))
+    d("mean_action = {}".format(mean_action))
+    d("std_action  = {}".format(std_action))
+
     #===========================================================================
     # Build dynamics model and MPC controllers.
     sess = tf.Session()
@@ -251,7 +259,7 @@ def train(env,
 
         # Compute metrics.
         costs = np.array([path_cost(cost_fn, path) for path in rl_paths])
-        returns = np.concatenate([sum(path["rewards"]) for path in rl_paths])
+        returns = np.array([sum(path["rewards"]) for path in rl_paths])
 
         # Update data.
         new_data = paths_to_data(rl_paths)
