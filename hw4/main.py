@@ -242,6 +242,15 @@ def train(env,
     for itr in range(onpol_iters):
         d("Iteration {}".format(itr))
 
+        # Shuffle data.
+        d("Shuffling data.")
+        shuffle_indexes = np.random.permutation(data["observations"].shape[0])
+        data["observations"] = data["observations"][shuffle_indexes]
+        data["actions"] = data["actions"][shuffle_indexes]
+        data["next_observations"] = data["next_observations"][shuffle_indexes]
+        data["rewards"] = data["rewards"][shuffle_indexes]
+        d("Done shuffling data.")
+
         # Fit the dynamics.
         d("Fitting dynamics.")
         dyn_model.fit(data)
