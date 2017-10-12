@@ -46,10 +46,10 @@ class NNDynamicsModel():
         self.sess = sess
 
         # Build NN placeholders.
-        assert(len(env.observation_space.shape) == 0)
-        assert(len(env.action_space.shape) == 0)
+        assert(len(env.observation_space.shape) == 1)
+        assert(len(env.action_space.shape) == 1)
         obs_dim = env.observation_space.shape[0]
-        acts_dim = env.acts_space.shape[0]
+        acts_dim = env.action_space.shape[0]
         self.obs_ph = tf.placeholder(tf.float32, [None, obs_dim])
         self.acts_ph = tf.placeholder(tf.float32, [None, acts_dim])
         self.next_obs_ph = tf.placeholder(tf.float32, [None, obs_dim])
@@ -86,7 +86,7 @@ class NNDynamicsModel():
         unnormalized_next_obs = data["next_observations"]
         assert(len(unnormalized_obs) == len(unnormalized_acts) == len(unnormalized_next_obs))
 
-        for _ in self.iterations:
+        for _ in range(self.iterations):
             for (low, high) in batch_indexes(unnormalized_obs, self.batch_size):
                 feed_dict = {
                     self.obs_ph: unnormalized_obs[low:high],
