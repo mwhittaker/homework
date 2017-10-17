@@ -71,11 +71,10 @@ class NNDynamicsModel():
             output_activation=output_activation)
 
         # Build cost function and optimizer.
-        unnormalized_deltas = self.next_obs_ph - self.obs_ph
-        predicted_unnormalized_deltas = (self.predicted_normalized_deltas * std_deltas) + mean_deltas
+        normalized_deltas = ((self.next_obs_ph - self.obs_ph) - mean_deltas) / (std_deltas + self.epsilon)
         self.loss = tf.losses.mean_squared_error(
-            labels=unnormalized_deltas,
-            predictions=predicted_unnormalized_deltas)
+            labels=normalized_deltas,
+            predictions=self.predicted_normalized_deltas)
         self.update_op = tf.train.AdamOptimizer(learning_rate).minimize(self.loss)
 
         d("self.obs_ph                      = {}".format(self.obs_ph))
@@ -85,8 +84,7 @@ class NNDynamicsModel():
         d("normalized_acts                  = {}".format(normalized_acts))
         d("normalized_obs_and_acts          = {}".format(normalized_obs_and_acts))
         d("self.predicted_normalized_deltas = {}".format(self.predicted_normalized_deltas))
-        d("unnormalized_deltas              = {}".format(unnormalized_deltas))
-        d("predicted_unnormalized_deltas    = {}".format(predicted_unnormalized_deltas))
+        d("normalized_deltas                = {}".format(normalized_deltas))
         d("self.loss                        = {}".format(self.loss))
 
     def fit(self, data):
