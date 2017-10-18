@@ -8,7 +8,7 @@ import os
 Using the plotter:
 
 Call it from the command line, and supply it with logdirs to experiments.
-Suppose you ran an experiment with name 'test', and you ran 'test' for 10 
+Suppose you ran an experiment with name 'test', and you ran 'test' for 10
 random seeds. The runner code stored it in the directory structure
 
     data
@@ -32,12 +32,12 @@ seeds, call
     python plot.py data/test_EnvName_DateTime --value AverageReturn
 
 and voila. To see a different statistics, change what you put in for
-the keyword --value. You can also enter /multiple/ values, and it will 
+the keyword --value. You can also enter /multiple/ values, and it will
 make all of them in order.
 
 
 Suppose you ran two experiments: 'test1' and 'test2'. In 'test2' you tried
-a different set of hyperparameters from 'test1', and now you would like 
+a different set of hyperparameters from 'test1', and now you would like
 to compare them -- see their learning curves side-by-side. Just call
 
     python plot.py data/test1 data/test2
@@ -48,13 +48,17 @@ the --legend flag and then provide a title for each logdir.
 
 """
 
-def plot_data(data, value="AverageReturn"):
+def plot_data(data, output, value="AverageReturn"):
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
     sns.set(style="darkgrid", font_scale=1.5)
     sns.tsplot(data=data, time="Iteration", value=value, unit="Unit", condition="Condition")
     plt.legend(loc='best').draggable()
-    plt.show()
+    plt.tight_layout()
+    if output is None:
+        plt.show()
+    else:
+        plt.savefig(output)
 
 
 def get_datasets(fpath, condition=None):
@@ -65,7 +69,7 @@ def get_datasets(fpath, condition=None):
             param_path = open(os.path.join(root,'params.json'))
             params = json.load(param_path)
             exp_name = params['exp_name']
-            
+
             log_path = os.path.join(root,'log.txt')
             experiment_data = pd.read_table(log_path)
 
@@ -92,6 +96,7 @@ def main():
     parser.add_argument('logdir', nargs='*')
     parser.add_argument('--legend', nargs='*')
     parser.add_argument('--value', default='AverageReturn', nargs='*')
+    parser.add_argument('--output')
     args = parser.parse_args()
 
     use_legend = False
@@ -113,7 +118,7 @@ def main():
     else:
         values = [args.value]
     for value in values:
-        plot_data(data, value=value)
+        plot_data(data, args.output, value=value)
 
 if __name__ == "__main__":
     main()
